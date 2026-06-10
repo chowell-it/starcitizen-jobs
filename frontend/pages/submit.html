@@ -76,7 +76,7 @@ renderNav();
 /** Load categories into dropdown */
 async function loadCategories() {
     try {
-        const res = await fetch("http://localhost:8000/api/jobs/categories");
+        const res = await fetch("https://starcitizen-jobs-production.up.railway.app/api/jobs/categories");
         const cats = await res.json();
         const sel = document.getElementById("category");
         cats.forEach(c => {
