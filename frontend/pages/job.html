@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Detail — UEE Operations</title>
+    <link rel="stylesheet" href="/frontend/css/main.css">
+</head>
+<body>
+
+<nav class="nav" id="main-nav"></nav>
+
+<main class="page-wrapper" style="padding-top: 2rem; padding-bottom: 3rem; max-width: 800px;">
+
+    <div id="job-detail">
+        <p class="text-muted">Loading...</p>
+    </div>
+
+    <!-- Rate members section, shown only after completion -->
+    <div id="rate-section" class="hidden mt-3">
+        <h3>Rate Crew Members</h3>
+        <div id="rate-list" class="mt-2" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+    </div>
+
+</main>
+
+<script type="module">
+import { Jobs, Auth } from "/frontend/js/api.js";
+import { renderNav, statusBadge, diffBadge, trustBadge, formatAUEC, toast } from "/frontend/js/ui.js";
+
+renderNav();
+
+const jobId = new URLSearchParams(window.location.search).get("id");
+const user = Auth.currentUser();
+
+/** Render the full job detail view */
+async function loadJob() {
+    if (!jobId) { document.getElementById("job-detail").innerHTML = "<p class='text-red'>No job ID provided.</p>"; return; }
+
+    try {
+        const j = await Jobs.get(jobId);
+        const isPoster = user?.id === j.poster?.id;
+        const isMember = j.members?.some(m => m.user_id === user?.id);
+        const canAccept = user && !isPoster && !isMember && ["open", "partial"].includes(j.status);
+        const canManage = isPoster || user?.role === "admin";
+
+        document.getElementById("job-detail").innerHTML = `
+            <div class="flex-between" style="margin-bottom: 1rem;">
+                <div>
+                    <h1 style="margin-bottom: 0.25rem;">${j.title}</h1>
+                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+                        ${statusBadge(j.status)}
+                        ${diffBadge(j.difficulty)}
+                        <span class="text-muted text-sm">${j.category?.name || ""}</span>
+                    </div>
+                </div>
+                <div class="job-card-pay">${formatAUEC(j.pay_auec)}</div>
+            </div>
+
+            <div class="card mt-2">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <p class="text-sm text-muted">CREW NEEDED</p>
+                        <p>${j.slots_filled} / ${j.slots_total}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-muted">POSTED BY</p>
+                        <p>
+                            <a href="/pages/profile.html?id=${j.poster?.id}">${j.poster?.sc_username}</a>
+                            ${trustBadge(j.poster?.trust_flag)}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-muted">DISCORD</p>
+                        <p>${j.poster?.discord_handle || '<span class="text-muted">Accept job to reveal</span>'}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-muted">EXPIRES</p>
+                        <p>${j.expires_at ? new Date(j.expires_at).toLocaleDateString() : "No expiry"}</p>
+                    </div>
+                </div>
+
+                ${j.description ? `<div class="mt-2" style="border-top: 1px solid var(--border); padding-top: 1rem;">
+                    <p class="text-sm text-muted" style="margin-bottom: 0.5rem;">BRIEFING</p>
+                    <p style="white-space: pre-wrap;">${j.description}</p>
+                </div>` : ""}
+
+                ${j.failure_reason ? `<div class="mt-2" style="border-top: 1px solid var(--border); padding-top: 1rem;">
+                    <p class="text-sm text-red">FAILURE REPORT: ${j.failure_reason}</p>
+                </div>` : ""}
+            </div>
+
+            <!-- Current crew -->
+            <div class="mt-2">
+                <h3 style="margin-bottom: 0.75rem;">Crew Roster</h3>
+                ${(j.members || []).map(m => `
+                    <div class="flex-between" style="padding: 0.4rem 0; border-bottom: 1px solid var(--border);">
+                        <span>
+                            <a href="/pages/profile.html?id=${m.user_id}">${m.profiles?.sc_username}</a>
+                            ${m.is_leader ? '<span class="badge" style="margin-left: 0.5rem; color: var(--amber); border-color: var(--amber);">Leader</span>' : ""}
+                            ${trustBadge(m.profiles?.trust_flag)}
+                        </span>
+                    </div>
+                `).join("") || '<p class="text-muted text-sm">No crew yet.</p>'}
+            </div>
+
+            <!-- Action buttons -->
+            <div class="mt-3 flex gap-2" style="flex-wrap: wrap;">
+                ${canAccept ? `<button class="btn btn-primary" id="accept-btn">Accept Mission</button>` : ""}
+                ${canManage && j.status === "full" ? `<button class="btn btn-outline" id="start-btn">Mark In Progress</button>` : ""}
+                ${canManage && j.status === "in_progress" ? `
+                    <button class="btn btn-primary" id="complete-btn">Mark Completed</button>
+                    <button class="btn btn-danger" id="fail-btn">Mark Failed</button>
+                ` : ""}
+            </div>
+        `;
+
+        // Bind action buttons
+        document.getElementById("accept-btn")?.addEventListener("click", acceptJob);
+        document.getElementById("start-btn")?.addEventListener("click", () => updateStatus("in_progress"));
+        document.getElementById("complete-btn")?.addEventListener("click", () => updateStatus("completed"));
+        document.getElementById("fail-btn")?.addEventListener("click", promptFail);
+
+        // Show rating section after completion for members
+        if (j.status === "completed" && isMember) renderRatings(j);
+
+    } catch (e) {
+        toast(e.message, "error");
+    }
+}
+
+/** Accept mission handler */
+async function acceptJob() {
+    try {
+        await Jobs.accept(jobId);
+        toast("Mission accepted. Check Discord for briefing.");
+        loadJob();
+    } catch (e) { toast(e.message, "error"); }
+}
+
+/** Update job status */
+async function updateStatus(status, failure_reason = null) {
+    try {
+        await Jobs.updateStatus(jobId, status, failure_reason);
+        toast(`Status updated to ${status}`);
+        loadJob();
+    } catch (e) { toast(e.message, "error"); }
+}
+
+/** Prompt for failure reason then update */
+function promptFail() {
+    const reason = window.prompt("Enter failure reason (required):");
+    if (!reason?.trim()) return;
+    updateStatus("failed", reason.trim());
+}
+
+/** Render star rating widgets for each crew member */
+function renderRatings(j) {
+    const section = document.getElementById("rate-section");
+    const list = document.getElementById("rate-list");
+    section.classList.remove("hidden");
+
+    const others = (j.members || []).filter(m => m.user_id !== user?.id);
+    if (!others.length) { list.innerHTML = "<p class='text-muted text-sm'>No other crew to rate.</p>"; return; }
+
+    list.innerHTML = others.map(m => `
+        <div class="card" style="display: flex; align-items: center; justify-content: space-between;">
+            <span>${m.profiles?.sc_username}</span>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <select id="stars-${m.user_id}" style="width: auto;">
+                    <option value="">--</option>
+                    <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                </select>
+                <button class="btn btn-outline" onclick="submitRating('${m.user_id}')">Rate</button>
+            </div>
+        </div>
+    `).join("");
+}
+
+/** Submit star rating */
+window.submitRating = async (rateeId) => {
+    const stars = parseInt(document.getElementById(`stars-${rateeId}`)?.value);
+    if (!stars) { toast("Select a star rating", "error"); return; }
+    try {
+        await Jobs.rate(jobId, rateeId, stars);
+        toast("Rating submitted");
+    } catch (e) { toast(e.message, "error"); }
+};
+
+loadJob();
+</script>
+</body>
+</html>

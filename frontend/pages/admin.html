@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — UEE Operations</title>
+    <link rel="stylesheet" href="/frontend/css/main.css">
+</head>
+<body>
+
+<nav class="nav" id="main-nav"></nav>
+
+<main class="page-wrapper" style="padding-top: 2rem; padding-bottom: 3rem;">
+
+    <h1 style="margin-bottom: 1.5rem;">Admin Panel</h1>
+
+    <!-- Pending job approvals -->
+    <section class="mt-2">
+        <h2 style="margin-bottom: 1rem;">Pending Approvals</h2>
+        <div id="pending-list" class="card">
+            <p class="text-muted">Loading...</p>
+        </div>
+    </section>
+
+    <!-- User management -->
+    <section class="mt-3">
+        <h2 style="margin-bottom: 1rem;">User Management</h2>
+        <div class="card" style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Discord</th>
+                        <th>Trust</th>
+                        <th>Role</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="user-list">
+                    <tr><td colspan="5" class="text-muted">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<script type="module">
+import { Admin, Auth } from "/frontend/js/api.js";
+import { renderNav, statusBadge, trustBadge, toast } from "/frontend/js/ui.js";
+
+// Client-side guard: redirect non-admins (server still returns 404 for all API calls)
+const user = Auth.currentUser();
+if (!user || user.role !== "admin") window.location.href = "/index.html";
+
+renderNav();
+
+/** Render pending jobs awaiting approval */
+async function loadPending() {
+    try {
+        const jobs = await Admin.pendingJobs();
+        const el = document.getElementById("pending-list");
+
+        if (!jobs.length) {
+            el.innerHTML = `<p class="text-muted">No pending approvals.</p>`;
+            return;
+        }
+
+        el.innerHTML = jobs.map(j => `
+            <div class="flex-between" style="padding: 0.6rem 0; border-bottom: 1px solid var(--border);">
+                <div>
+                    <strong>${j.title}</strong>
+                    <span class="text-muted text-sm" style="margin-left: 0.5rem;">by ${j.poster?.sc_username}</span>
+                    ${trustBadge(j.poster?.trust_flag)}
+                </div>
+                <div class="flex gap-1">
+                    <button class="btn btn-outline" onclick="approve('${j.id}', true)">Approve</button>
+                    <button class="btn btn-danger" onclick="approve('${j.id}', false)">Reject</button>
+                </div>
+            </div>
+        `).join("");
+    } catch (e) { toast(e.message, "error"); }
+}
+
+/** Render user management table */
+async function loadUsers() {
+    try {
+        const users = await Admin.listUsers();
+        const tbody = document.getElementById("user-list");
+
+        tbody.innerHTML = users.map(u => `
+            <tr>
+                <td><a href="/pages/profile.html?id=${u.id}">${u.sc_username}</a></td>
+                <td class="text-muted">${u.discord_handle}</td>
+                <td>
+                    ${parseFloat(u.trust_score).toFixed(1)}
+                    ${trustBadge(u.trust_flag)}
+                </td>
+                <td>${u.role}</td>
+                <td>
+                    <div class="flex gap-1">
+                        ${u.role === "user"
+                            ? `<button class="btn btn-outline" onclick="setRole('${u.id}', 'admin')">Make Admin</button>`
+                            : `<button class="btn btn-outline" onclick="setRole('${u.id}', 'user')">Demote</button>`
+                        }
+                        <button class="btn btn-danger" onclick="removeUser('${u.id}', '${u.sc_username}')">Delete</button>
+                    </div>
+                </td>
+            </tr>
+        `).join("");
+    } catch (e) { toast(e.message, "error"); }
+}
+
+/** Approve or reject a pending job */
+window.approve = async (id, approved) => {
+    try {
+        await Admin.approveJob(id, approved);
+        toast(approved ? "Job approved" : "Job rejected");
+        loadPending();
+    } catch (e) { toast(e.message, "error"); }
+};
+
+/** Update a user's role */
+window.setRole = async (id, role) => {
+    try {
+        await Admin.updateRole(id, role);
+        toast(`Role updated to ${role}`);
+        loadUsers();
+    } catch (e) { toast(e.message, "error"); }
+};
+
+/** Delete a user account */
+window.removeUser = async (id, name) => {
+    if (!confirm(`Delete user ${name}? This cannot be undone.`)) return;
+    try {
+        await Admin.deleteUser(id);
+        toast("User deleted");
+        loadUsers();
+    } catch (e) { toast(e.message, "error"); }
+};
+
+loadPending();
+loadUsers();
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile — UEE Operations</title>
+    <link rel="stylesheet" href="/frontend/css/main.css">
+</head>
+<body>
+
+<nav class="nav" id="main-nav"></nav>
+
+<main class="page-wrapper" style="padding-top: 2rem; padding-bottom: 3rem; max-width: 640px;">
+
+    <div id="profile-view">
+        <p class="text-muted">Loading...</p>
+    </div>
+
+    <!-- Settings panel — only shown on own profile -->
+    <div id="settings-panel" class="hidden mt-3">
+        <h2 style="margin-bottom: 1rem;">Settings</h2>
+        <div class="card">
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="discord-public" style="width: auto; margin-right: 0.4rem;">
+                    Show Discord handle publicly on job listings
+                </label>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="tab-pref" style="width: auto; margin-right: 0.4rem;" checked>
+                    Open job details in a new tab
+                </label>
+            </div>
+            <button class="btn btn-primary" id="save-settings">Save Settings</button>
+        </div>
+    </div>
+
+</main>
+
+<script type="module">
+import { Users, Auth } from "/frontend/js/api.js";
+import { renderNav, trustBadge, toast } from "/frontend/js/ui.js";
+
+renderNav();
+
+const urlId = new URLSearchParams(window.location.search).get("id");
+const currentUser = Auth.currentUser();
+const profileId = urlId || currentUser?.id;
+
+if (!profileId) { window.location.href = "/pages/login.html"; }
+
+/** Load and render the profile */
+async function loadProfile() {
+    try {
+        const p = await Users.getProfile(profileId);
+        const isOwn = currentUser?.id === profileId;
+
+        document.getElementById("profile-view").innerHTML = `
+            <div class="flex-between" style="margin-bottom: 1.5rem;">
+                <div>
+                    <h1>${p.sc_username}</h1>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.25rem;">
+                        <span class="text-muted text-sm">Trust: ${parseFloat(p.trust_score).toFixed(1)} / 5.0</span>
+                        ${trustBadge(p.trust_flag)}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <p class="text-sm text-muted">DISCORD</p>
+                        <p>${p.discord_handle || '<span class="text-muted">Hidden</span>'}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-muted">MEMBER SINCE</p>
+                        <p>${new Date(p.created_at).toLocaleDateString()}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Show settings panel on own profile
+        if (isOwn) {
+            document.getElementById("settings-panel").classList.remove("hidden");
+            document.getElementById("discord-public").checked = p.discord_public || false;
+            document.getElementById("tab-pref").checked = p.job_tab_preference !== false;
+        }
+    } catch (e) { toast(e.message, "error"); }
+}
+
+/** Save account settings */
+document.getElementById("save-settings")?.addEventListener("click", async () => {
+    try {
+        await Users.updateSettings({
+            discord_public: document.getElementById("discord-public").checked,
+            job_tab_preference: document.getElementById("tab-pref").checked,
+        });
+        toast("Settings saved");
+    } catch (e) { toast(e.message, "error"); }
+});
+
+loadProfile();
+</script>
+</body>
+</html>

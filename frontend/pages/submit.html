@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Operation — UEE Operations</title>
+    <link rel="stylesheet" href="/frontend/css/main.css">
+</head>
+<body>
+
+<nav class="nav" id="main-nav"></nav>
+
+<main class="page-wrapper" style="padding-top: 2rem; padding-bottom: 3rem; max-width: 640px;">
+
+    <h1 style="margin-bottom: 1.5rem;">Post Operation</h1>
+
+    <div class="card">
+        <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="title" placeholder="Convoy escort to ArcCorp">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label>Category</label>
+                <select id="category"></select>
+            </div>
+            <div class="form-group">
+                <label>Difficulty</label>
+                <select id="difficulty">
+                    <option>Easy</option>
+                    <option>Medium</option>
+                    <option>Hard</option>
+                    <option>Extreme</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Pay (aUEC)</label>
+                <input type="number" id="pay" placeholder="50000" min="0">
+            </div>
+            <div class="form-group">
+                <label>Crew Slots (max 10)</label>
+                <input type="number" id="slots" value="1" min="1" max="10">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Expiry Date <span class="text-muted">(optional)</span></label>
+            <input type="datetime-local" id="expires">
+        </div>
+
+        <div class="form-group">
+            <label>Briefing / Description</label>
+            <textarea id="description" placeholder="Describe the operation, requirements, and meetup instructions..."></textarea>
+        </div>
+
+        <button class="btn btn-primary" id="submit-btn" style="width: 100%;">Post Operation</button>
+        <p id="submit-error" style="color: var(--red); font-size: 0.8rem; margin-top: 0.5rem;"></p>
+    </div>
+
+    <p class="text-muted text-sm mt-2">
+        Low trust users require admin approval before the job goes live.
+        You may have one active posting at a time.
+    </p>
+
+</main>
+
+<script type="module">
+import { Jobs, Auth } from "/frontend/js/api.js";
+import { renderNav, toast } from "/frontend/js/ui.js";
+
+// Must be logged in to post
+Auth.requireAuth();
+renderNav();
+
+/** Load categories into dropdown */
+async function loadCategories() {
+    try {
+        const res = await fetch("http://localhost:8000/api/jobs/categories");
+        const cats = await res.json();
+        const sel = document.getElementById("category");
+        cats.forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = c.id;
+            opt.textContent = c.name;
+            sel.appendChild(opt);
+        });
+    } catch (_) {}
+}
+
+/** Submit new job posting */
+document.getElementById("submit-btn").addEventListener("click", async () => {
+    const err = document.getElementById("submit-error");
+    err.textContent = "";
+
+    const body = {
+        title: document.getElementById("title").value.trim(),
+        category_id: document.getElementById("category").value,
+        difficulty: document.getElementById("difficulty").value,
+        pay_auec: parseInt(document.getElementById("pay").value) || 0,
+        slots_total: parseInt(document.getElementById("slots").value) || 1,
+        description: document.getElementById("description").value.trim() || null,
+        expires_at: document.getElementById("expires").value || null,
+    };
+
+    if (!body.title) { err.textContent = "Title is required."; return; }
+
+    try {
+        await Jobs.create(body);
+        toast("Operation posted successfully");
+        window.location.href = "/index.html";
+    } catch (e) {
+        err.textContent = e.message;
+    }
+});
+
+loadCategories();
+</script>
+</body>
+</html>

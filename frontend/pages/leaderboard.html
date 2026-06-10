@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard — UEE Operations</title>
+    <link rel="stylesheet" href="/frontend/css/main.css">
+</head>
+<body>
+
+<nav class="nav" id="main-nav"></nav>
+
+<main class="page-wrapper" style="padding-top: 2rem; padding-bottom: 3rem;">
+
+    <h1 style="margin-bottom: 1.5rem;">Contractor Rankings</h1>
+
+    <div class="card" style="overflow-x: auto;">
+        <table id="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Contractor</th>
+                    <th class="sortable" data-sort="jobs_completed">Jobs ↕</th>
+                    <th class="sortable" data-sort="total_earnings">Earnings ↕</th>
+                    <th class="sortable" data-sort="trust_score">Rating ↕</th>
+                    <th>Trust</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                <tr><td colspan="6" class="text-muted">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+</main>
+
+<script type="module">
+import { Leaderboard } from "/frontend/js/api.js";
+import { renderNav, trustBadge, toast } from "/frontend/js/ui.js";
+
+renderNav();
+
+let currentSort = "jobs_completed";
+
+/** Render leaderboard rows */
+function renderLeaderboard(rows) {
+    const tbody = document.getElementById("leaderboard-body");
+    if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-muted">No data yet.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = rows.map((r, i) => `
+        <tr>
+            <td class="text-muted">${i + 1}</td>
+            <td><a href="/pages/profile.html?id=${r.id}">${r.sc_username}</a></td>
+            <td>${r.jobs_completed}</td>
+            <td>${Number(r.total_earnings).toLocaleString()} aUEC</td>
+            <td>${r.trust_score ? parseFloat(r.trust_score).toFixed(1) : "—"}</td>
+            <td>${trustBadge(r.trust_flag) || '<span class="text-muted text-sm">Normal</span>'}</td>
+        </tr>
+    `).join("");
+}
+
+/** Load with current sort */
+async function loadLeaderboard() {
+    try {
+        const data = await Leaderboard.get(currentSort);
+        renderLeaderboard(data);
+    } catch (e) { toast(e.message, "error"); }
+}
+
+// Sortable column click handlers
+document.querySelectorAll("th.sortable").forEach(th => {
+    th.addEventListener("click", () => {
+        currentSort = th.dataset.sort;
+        loadLeaderboard();
+    });
+});
+
+loadLeaderboard();
+</script>
+</body>
+</html>

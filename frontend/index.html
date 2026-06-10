@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UEE Operations — Job Board</title>
+    <link rel="stylesheet" href="/frontend/css/main.css">
+</head>
+<body>
+
+<nav class="nav" id="main-nav"></nav>
+
+<main class="page-wrapper" style="padding-top: 2rem; padding-bottom: 3rem;">
+
+    <!-- Header -->
+    <div class="flex-between mt-2" style="margin-bottom: 1.5rem;">
+        <h1>Operations Board</h1>
+        <a href="/pages/submit.html" class="btn btn-primary" id="post-btn">+ Post Job</a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card" style="margin-bottom: 1.25rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+        <div class="form-group" style="margin-bottom:0; flex: 1; min-width: 140px;">
+            <label>Category</label>
+            <select id="filter-category">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0; flex: 1; min-width: 120px;">
+            <label>Difficulty</label>
+            <select id="filter-difficulty">
+                <option value="">All</option>
+                <option>Easy</option>
+                <option>Medium</option>
+                <option>Hard</option>
+                <option>Extreme</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0; flex: 1; min-width: 120px;">
+            <label>Status</label>
+            <select id="filter-status">
+                <option value="">Active</option>
+                <option value="open">Open</option>
+                <option value="partial">Partial</option>
+                <option value="full">Full</option>
+                <option value="in_progress">In Progress</option>
+            </select>
+        </div>
+        <button class="btn btn-outline" id="apply-filters">Filter</button>
+    </div>
+
+    <!-- Job list -->
+    <div id="job-list" style="display: flex; flex-direction: column; gap: 0.6rem;">
+        <p class="text-muted">Loading operations...</p>
+    </div>
+
+</main>
+
+<script type="module">
+import { Jobs } from "/frontend/js/api.js";
+import { renderNav, statusBadge, diffBadge, trustBadge, formatAUEC, openJob, toast } from "/frontend/js/ui.js";
+
+renderNav();
+
+/** Load categories into filter dropdown */
+async function loadCategories() {
+    try {
+        const res = await fetch("http://localhost:8000/api/jobs/categories");
+        const cats = await res.json();
+        const sel = document.getElementById("filter-category");
+        cats.forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = c.id;
+            opt.textContent = c.name;
+            sel.appendChild(opt);
+        });
+    } catch (_) {}
+}
+
+/** Render job cards from API response */
+function renderJobs(jobs) {
+    const list = document.getElementById("job-list");
+    if (!jobs.length) {
+        list.innerHTML = `<p class="text-muted">No operations found.</p>`;
+        return;
+    }
+
+    list.innerHTML = jobs.map(j => `
+        <div class="job-card" onclick="openJob('${j.id}')">
+            <div>
+                <div class="job-card-title">${j.title}</div>
+                <div class="job-card-meta">
+                    <span class="text-muted text-sm">${j.category?.name || "Uncategorized"}</span>
+                    ${diffBadge(j.difficulty)}
+                    ${statusBadge(j.status)}
+                    <span class="text-sm text-muted">${j.slots_filled}/${j.slots_total} crew</span>
+                    <span class="text-sm text-muted">by ${j.poster?.sc_username || "Unknown"} ${trustBadge(j.poster?.trust_flag)}</span>
+                </div>
+            </div>
+            <div class="job-card-pay">${formatAUEC(j.pay_auec)}</div>
+        </div>
+    `).join("");
+}
+
+/** Fetch and render with current filter values */
+async function loadJobs() {
+    const params = {};
+    const cat = document.getElementById("filter-category").value;
+    const diff = document.getElementById("filter-difficulty").value;
+    const status = document.getElementById("filter-status").value;
+    if (cat) params.category = cat;
+    if (diff) params.difficulty = diff;
+    if (status) params.status = status;
+
+    try {
+        const jobs = await Jobs.list(params);
+        renderJobs(jobs);
+    } catch (e) {
+        toast(e.message, "error");
+    }
+}
+
+// Expose openJob globally for onclick handlers
+window.openJob = openJob;
+
+document.getElementById("apply-filters").addEventListener("click", loadJobs);
+
+// Hide post button if not logged in
+import { Auth } from "/frontend/js/api.js";
+if (!Auth.currentUser()) document.getElementById("post-btn").classList.add("hidden");
+
+loadCategories();
+loadJobs();
+</script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — UEE Operations</title>
+    <link rel="stylesheet" href="/frontend/css/main.css">
+</head>
+<body style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+
+<div style="width: 100%; max-width: 400px; padding: 1.5rem;">
+
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <h1 class="nav-logo" style="font-size: 1.4rem; display: block; margin-bottom: 0.25rem;">UEE Operations</h1>
+        <p class="text-muted text-sm">Contractor Access Portal</p>
+    </div>
+
+    <!-- Toggle tabs -->
+    <div style="display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem;">
+        <button class="btn btn-outline" id="tab-login" style="flex: 1; border-radius: 0; border: none; border-bottom: 2px solid var(--cyan); color: var(--cyan);" onclick="showTab('login')">Login</button>
+        <button class="btn btn-outline" id="tab-register" style="flex: 1; border-radius: 0; border: none; border-bottom: 2px solid transparent; color: var(--text-muted);" onclick="showTab('register')">Register</button>
+    </div>
+
+    <!-- Login form -->
+    <div id="login-form">
+        <div class="form-group">
+            <label>Star Citizen Username</label>
+            <input type="text" id="login-username" placeholder="YourHandle" autocomplete="username">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="login-password" autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary" style="width: 100%;" id="login-btn">Login</button>
+        <p class="text-muted text-sm mt-1" id="login-error" style="color: var(--red);"></p>
+    </div>
+
+    <!-- Register form -->
+    <div id="register-form" class="hidden">
+        <div class="form-group">
+            <label>Star Citizen Username</label>
+            <input type="text" id="reg-username" placeholder="YourHandle">
+        </div>
+        <div class="form-group">
+            <label>Discord Handle</label>
+            <input type="text" id="reg-discord" placeholder="username or user#1234">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="reg-password" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+            <label>Email <span class="text-muted">(optional — recovery only)</span></label>
+            <input type="email" id="reg-email" placeholder="optional">
+        </div>
+        <button class="btn btn-primary" style="width: 100%;" id="register-btn">Create Account</button>
+        <p id="reg-error" style="color: var(--red); font-size: 0.8rem; margin-top: 0.5rem;"></p>
+    </div>
+
+</div>
+
+<script type="module">
+import { Auth } from "/frontend/js/api.js";
+
+// Redirect if already logged in
+if (Auth.currentUser()) window.location.href = "/index.html";
+
+/** Switch between login and register tabs */
+window.showTab = (tab) => {
+    document.getElementById("login-form").classList.toggle("hidden", tab !== "login");
+    document.getElementById("register-form").classList.toggle("hidden", tab !== "register");
+    document.getElementById("tab-login").style.borderBottomColor = tab === "login" ? "var(--cyan)" : "transparent";
+    document.getElementById("tab-login").style.color = tab === "login" ? "var(--cyan)" : "var(--text-muted)";
+    document.getElementById("tab-register").style.borderBottomColor = tab === "register" ? "var(--cyan)" : "transparent";
+    document.getElementById("tab-register").style.color = tab === "register" ? "var(--cyan)" : "var(--text-muted)";
+};
+
+/** Login handler */
+document.getElementById("login-btn").addEventListener("click", async () => {
+    const username = document.getElementById("login-username").value.trim();
+    const password = document.getElementById("login-password").value;
+    const err = document.getElementById("login-error");
+    err.textContent = "";
+
+    try {
+        await Auth.login(username, password);
+        window.location.href = "/index.html";
+    } catch (e) {
+        err.textContent = e.message;
+    }
+});
+
+/** Register handler */
+document.getElementById("register-btn").addEventListener("click", async () => {
+    const err = document.getElementById("reg-error");
+    err.textContent = "";
+
+    const body = {
+        sc_username: document.getElementById("reg-username").value.trim(),
+        discord_handle: document.getElementById("reg-discord").value.trim(),
+        password: document.getElementById("reg-password").value,
+        email: document.getElementById("reg-email").value.trim() || undefined,
+    };
+
+    if (!body.sc_username || !body.discord_handle || !body.password) {
+        err.textContent = "Username, Discord handle, and password are required.";
+        return;
+    }
+
+    try {
+        await Auth.register(body);
+        // Auto-login after register
+        await Auth.login(body.sc_username, body.password);
+        window.location.href = "/index.html";
+    } catch (e) {
+        err.textContent = e.message;
+    }
+});
+
+// Allow Enter key to submit
+document.getElementById("login-password").addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("login-btn").click();
+});
+</script>
+</body>
+</html>
