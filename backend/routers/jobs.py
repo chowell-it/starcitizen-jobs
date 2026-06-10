@@ -39,7 +39,7 @@ class RatingRequest(BaseModel):
     stars: int
 
 
-@router.get("/")
+@router.get("")
 def list_jobs(
     category: Optional[str] = Query(None),
     difficulty: Optional[str] = Query(None),
@@ -91,7 +91,7 @@ def get_job(job_id: str, user: dict = Depends(get_current_user)):
     return data
 
 
-@router.post("/")
+@router.post("")
 def create_job(body: JobCreateRequest, user: dict = Depends(get_current_user)):
     """
     Create a new job. One active post per user enforced.
