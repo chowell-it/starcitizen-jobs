@@ -347,7 +347,46 @@ tr:hover td { background: var(--bg-elevated); }
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 640px) {
-    .nav-links { gap: 1rem; }
-    h1 { font-size: 1.5rem; }
-    .job-card { grid-template-columns: 1fr; }
+    /* Nav */
+    .nav { padding: 0.75rem 1rem; height: auto; flex-wrap: wrap; gap: 0.5rem; }
+    .nav-links { gap: 0.6rem; flex-wrap: wrap; }
+    .nav-links a { font-size: 0.75rem; }
+    .nav-logo { font-size: 0.95rem; }
+
+    /* Typography */
+    h1 { font-size: 1.25rem; }
+    h2 { font-size: 1.1rem; }
+
+    /* Layout */
+    .page-wrapper { padding: 0 0.75rem; }
+
+    /* Job cards */
+    .job-card { grid-template-columns: 1fr; gap: 0.4rem; }
+    .job-card-pay { font-size: 0.95rem; }
+    .job-card-meta { gap: 0.4rem; }
+
+    /* Tables */
+    table { min-width: 480px; }
+
+    /* Toast */
+    #toast-container { left: 0.75rem; right: 0.75rem; bottom: 1rem; }
+    .toast { font-size: 0.8rem; }
+
+    /* Flex wrap */
+    .flex-between { flex-wrap: wrap; gap: 0.5rem; }
+}
+
+@media (max-width: 400px) {
+    .nav-links { display: none; }
+}
+
+/* ── Mobile grid helpers ─────────────────────────────────── */
+.grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 640px) {
+    .grid-2col { grid-template-columns: 1fr; }
 }
