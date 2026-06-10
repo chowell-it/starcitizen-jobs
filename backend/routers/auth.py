@@ -15,7 +15,7 @@ class RegisterRequest(BaseModel):
     sc_username: str
     discord_handle: str
     password: str
-    email: Optional[EmailStr] = None  # optional for recovery only
+    email: Optional[EmailStr] = None
 
 
 class LoginRequest(BaseModel):
@@ -26,7 +26,6 @@ class LoginRequest(BaseModel):
 @router.post("/register")
 def register(body: RegisterRequest):
     """Register new user. Uses sc_username as display identity."""
-    # Use a synthetic email for Supabase auth if no real email provided
     auth_email = body.email or f"{body.sc_username}@scjobboard.internal"
 
     try:
@@ -49,7 +48,7 @@ def register(body: RegisterRequest):
 
 @router.post("/login")
 def login(body: LoginRequest):
-    """Login with sc_username and password. Returns JWT session token."""
+    """Login with sc_username and password. Returns JWT and full profile."""
     # Look up auth email from sc_username
     profile = supabase.table("profiles").select("id, email").eq("sc_username", body.sc_username).maybe_single().execute()
     if not profile.data:
@@ -64,12 +63,12 @@ def login(body: LoginRequest):
         })
         if not result.session:
             raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        # Return full profile so frontend has role, trust_flag, and preferences
+        full_profile = supabase.table("profiles").select("*").eq("id", result.user.id).single().execute()
         return {
             "access_token": result.session.access_token,
-            "user": {
-                "id": result.user.id,
-                "sc_username": body.sc_username,
-            }
+            "user": full_profile.data,
         }
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid credentials")

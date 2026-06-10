@@ -75,17 +75,20 @@ renderNav();
 
 /** Load categories into dropdown */
 async function loadCategories() {
+    const sel = document.getElementById("category");
     try {
         const res = await fetch("https://starcitizen-jobs-production.up.railway.app/api/jobs/categories");
         const cats = await res.json();
-        const sel = document.getElementById("category");
+        sel.innerHTML = "";
         cats.forEach(c => {
             const opt = document.createElement("option");
             opt.value = c.id;
             opt.textContent = c.name;
             sel.appendChild(opt);
         });
-    } catch (_) {}
+    } catch (e) {
+        sel.innerHTML = "<option value=''>Failed to load categories</option>";
+    }
 }
 
 /** Submit new job posting */
