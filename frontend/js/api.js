@@ -3,7 +3,7 @@
  * All backend calls go through here. Token stored in localStorage.
  */
 
-const API_BASE = "http://localhost:8000/api"; // change to hosted URL in prod
+const API_BASE = "https://starcitizen-jobs-production.up.railway.app"; // change to hosted URL in prod
 
 /** Attach auth header if token exists */
 function authHeaders() {
