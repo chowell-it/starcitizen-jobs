@@ -9,7 +9,7 @@ from config import supabase
 router = APIRouter()
 
 
-@router.get("/")
+@router.get("")
 def get_leaderboard(sort_by: Optional[str] = Query("jobs_completed")):
     """Return leaderboard sorted by chosen column."""
     valid_sorts = {"jobs_completed", "total_earnings", "trust_score"}
