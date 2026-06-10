@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers import auth, jobs, users, admin, leaderboard
 import os
 
-app = FastAPI(title="SC Job Board", docs_url=None, redoc_url=None)  # disable public docs in prod
+app = FastAPI(title="SC Job Board", docs_url=None, redoc_url=None, redirect_slashes=False)  # disable public docs in prod
 
 # CORS: restrict to your frontend domain in production
 app.add_middleware(
