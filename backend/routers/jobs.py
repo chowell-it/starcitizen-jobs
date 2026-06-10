@@ -12,6 +12,13 @@ from middleware.auth import get_current_user
 router = APIRouter()
 
 
+@router.get("/categories")
+def get_categories():
+    """Return all job categories. Public endpoint."""
+    result = supabase.table("categories").select("id, name").order("name").execute()
+    return result.data
+
+
 class JobCreateRequest(BaseModel):
     title: str
     category_id: str
