@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login — UEE Operations</title>
-    <link rel="stylesheet" href="/frontend/css/main.css">
+    <link rel="stylesheet" href="/css/main.css">
 </head>
 <body style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
 
@@ -60,7 +60,7 @@
 </div>
 
 <script type="module">
-import { Auth } from "/frontend/js/api.js";
+import { Auth } from "/js/api.js";
 
 // Redirect if already logged in
 if (Auth.currentUser()) window.location.href = "/index.html";

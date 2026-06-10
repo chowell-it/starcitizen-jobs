@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UEE Operations — Job Board</title>
-    <link rel="stylesheet" href="/frontend/css/main.css">
+    <link rel="stylesheet" href="/css/main.css">
 </head>
 <body>
 
@@ -57,8 +57,8 @@
 </main>
 
 <script type="module">
-import { Jobs } from "/frontend/js/api.js";
-import { renderNav, statusBadge, diffBadge, trustBadge, formatAUEC, openJob, toast } from "/frontend/js/ui.js";
+import { Jobs } from "/js/api.js";
+import { renderNav, statusBadge, diffBadge, trustBadge, formatAUEC, openJob, toast } from "/js/ui.js";
 
 renderNav();
 
@@ -126,7 +126,7 @@ window.openJob = openJob;
 document.getElementById("apply-filters").addEventListener("click", loadJobs);
 
 // Hide post button if not logged in
-import { Auth } from "/frontend/js/api.js";
+import { Auth } from "/js/api.js";
 if (!Auth.currentUser()) document.getElementById("post-btn").classList.add("hidden");
 
 loadCategories();

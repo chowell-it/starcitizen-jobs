@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin — UEE Operations</title>
-    <link rel="stylesheet" href="/frontend/css/main.css">
+    <link rel="stylesheet" href="/css/main.css">
 </head>
 <body>
 
@@ -46,8 +46,8 @@
 </main>
 
 <script type="module">
-import { Admin, Auth } from "/frontend/js/api.js";
-import { renderNav, statusBadge, trustBadge, toast } from "/frontend/js/ui.js";
+import { Admin, Auth } from "/js/api.js";
+import { renderNav, statusBadge, trustBadge, toast } from "/js/ui.js";
 
 // Client-side guard: redirect non-admins (server still returns 404 for all API calls)
 const user = Auth.currentUser();
